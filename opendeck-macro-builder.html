@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenDeck Macro Builder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: linear-gradient(160deg, #0d0d12 0%, #15151d 50%, #0d0d12 100%);
+      color: #e0e0e0;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      min-height: 100vh;
+      overflow-x: auto;
+    }
+    button { outline: none; font-family: inherit; }
+    button:focus-visible { outline: 2px solid #00e5ff; outline-offset: 2px; }
+
+    #app {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #00e5ff, #ff6f00);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.02em;
+    }
+    .subtitle { color: #666; font-size: 13px; margin-top: 8px; }
+
+    .output-box {
+      width: 100%;
+      max-width: 960px;
+      background: linear-gradient(145deg, #1a1a22, #16161e);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .output-box .label {
+      font-size: 10px;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 6px;
+    }
+    .syntax-display {
+      font-size: 15px;
+      color: #00e5ff;
+      overflow-x: auto;
+      white-space: nowrap;
+      padding: 8px 12px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.04);
+      min-height: 38px;
+      display: flex;
+      align-items: center;
+    }
+    .syntax-display.empty { color: #444; }
+
+    .btn-copy, .btn-clear {
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      letter-spacing: 0.02em;
+      transition: all 0.2s ease;
+      border: none;
+    }
+    .btn-copy {
+      background: linear-gradient(135deg, #00e5ff, #00b8d4);
+      color: #000;
+    }
+    .btn-copy.copied { background: linear-gradient(135deg, #00c853, #00e676); }
+    .btn-copy:disabled { background: #333; color: #666; cursor: default; }
+    .btn-clear {
+      padding: 10px 16px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: transparent;
+      color: #999;
+    }
+
+    .order-flow {
+      width: 100%;
+      max-width: 960px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .order-label {
+      font-size: 10px;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-right: 8px;
+    }
+    .order-arrow { color: #444; font-size: 14px; }
+    .order-tag {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .order-tag.mod { background: rgba(0,229,255,0.12); color: #00e5ff; border: 1px solid rgba(0,229,255,0.25); }
+    .order-tag.reg { background: rgba(255,111,0,0.12); color: #ff8a3d; border: 1px solid rgba(255,111,0,0.25); }
+    .order-num { opacity: 0.5; margin-right: 4px; }
+
+    .keyboard-wrap { display: flex; gap: 20px; align-items: flex-start; }
+    .kb-col { display: flex; flex-direction: column; gap: 4px; }
+    .kb-row { display: flex; gap: 4px; }
+
+    .key {
+      border-radius: 8px;
+      border: 2px solid rgba(255,255,255,0.08);
+      background: linear-gradient(145deg, #2a2a32, #222228);
+      color: #999;
+      font-weight: 500;
+      cursor: pointer;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
+      flex-shrink: 0;
+      letter-spacing: 0.02em;
+    }
+    .key:hover { border-color: rgba(255,255,255,0.2); color: #ccc; }
+    .key.sel-mod {
+      border-color: #00e5ff;
+      background: linear-gradient(145deg, rgba(0,229,255,0.13), rgba(0,229,255,0.07));
+      color: #00e5ff;
+      font-weight: 700;
+      box-shadow: 0 0 20px rgba(0,229,255,0.25), inset 0 1px 0 rgba(255,255,255,0.1);
+    }
+    .key.sel-reg {
+      border-color: #ff6f00;
+      background: linear-gradient(145deg, rgba(255,111,0,0.13), rgba(255,111,0,0.07));
+      color: #ff8a3d;
+      font-weight: 700;
+      box-shadow: 0 0 20px rgba(255,111,0,0.25), inset 0 1px 0 rgba(255,255,255,0.1);
+    }
+
+    .key-badge {
+      position: absolute;
+      top: 3px;
+      right: 5px;
+      font-size: 9px;
+      font-weight: 800;
+      border-radius: 6px;
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+    .key-badge.mod { color: #00e5ff; background: rgba(0,229,255,0.15); }
+    .key-badge.reg { color: #ff8a3d; background: rgba(255,111,0,0.15); }
+
+    .media-row {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+    }
+    .media-label {
+      font-size: 10px;
+      color: #444;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-right: 8px;
+    }
+
+    .legend {
+      display: flex;
+      gap: 24px;
+      font-size: 11px;
+      color: #555;
+      margin-top: 8px;
+    }
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .legend-swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+    }
+    .legend-swatch.mod { background: rgba(0,229,255,0.2); border: 1px solid #00e5ff; }
+    .legend-swatch.reg { background: rgba(255,111,0,0.2); border: 1px solid #ff6f00; }
+  </style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const MODIFIER_KEYS = ["Shift","Control","Alt","Meta","Super","LShift","RShift","LControl","RControl"];
+const KEY_UNIT = 52, KEY_GAP = 4;
+
+function isMod(key) { return MODIFIER_KEYS.includes(key); }
+
+const KEYBOARD_ROWS = [
+  [
+    {l:"Esc",k:"Escape",w:1},{l:"",k:null,w:0.5},
+    {l:"F1",k:"F1",w:1},{l:"F2",k:"F2",w:1},{l:"F3",k:"F3",w:1},{l:"F4",k:"F4",w:1},{l:"",k:null,w:0.25},
+    {l:"F5",k:"F5",w:1},{l:"F6",k:"F6",w:1},{l:"F7",k:"F7",w:1},{l:"F8",k:"F8",w:1},{l:"",k:null,w:0.25},
+    {l:"F9",k:"F9",w:1},{l:"F10",k:"F10",w:1},{l:"F11",k:"F11",w:1},{l:"F12",k:"F12",w:1},{l:"",k:null,w:0.25},
+    {l:"PrtSc",k:"PrintScr",w:1},{l:"ScrLk",k:"ScrollLock",w:1},{l:"Pause",k:"Pause",w:1},
+  ],
+  [
+    {l:"`",k:"uni('`')",w:1},{l:"1",k:"uni('1')",w:1},{l:"2",k:"uni('2')",w:1},{l:"3",k:"uni('3')",w:1},
+    {l:"4",k:"uni('4')",w:1},{l:"5",k:"uni('5')",w:1},{l:"6",k:"uni('6')",w:1},{l:"7",k:"uni('7')",w:1},
+    {l:"8",k:"uni('8')",w:1},{l:"9",k:"uni('9')",w:1},{l:"0",k:"uni('0')",w:1},{l:"-",k:"uni('-')",w:1},
+    {l:"=",k:"uni('=')",w:1},{l:"Backspace",k:"Backspace",w:2},{l:"",k:null,w:0.25},
+    {l:"Ins",k:"Insert",w:1},{l:"Home",k:"Home",w:1},{l:"PgUp",k:"PageUp",w:1},
+  ],
+  [
+    {l:"Tab",k:"Tab",w:1.5},{l:"Q",k:"uni('q')",w:1},{l:"W",k:"uni('w')",w:1},{l:"E",k:"uni('e')",w:1},
+    {l:"R",k:"uni('r')",w:1},{l:"T",k:"uni('t')",w:1},{l:"Y",k:"uni('y')",w:1},{l:"U",k:"uni('u')",w:1},
+    {l:"I",k:"uni('i')",w:1},{l:"O",k:"uni('o')",w:1},{l:"P",k:"uni('p')",w:1},{l:"[",k:"uni('[')",w:1},
+    {l:"]",k:"uni(']')",w:1},{l:"\\",k:"uni('\\\\')",w:1.5},{l:"",k:null,w:0.25},
+    {l:"Del",k:"Delete",w:1},{l:"End",k:"End",w:1},{l:"PgDn",k:"PageDown",w:1},
+  ],
+  [
+    {l:"Caps",k:"CapsLock",w:1.75},{l:"A",k:"uni('a')",w:1},{l:"S",k:"uni('s')",w:1},{l:"D",k:"uni('d')",w:1},
+    {l:"F",k:"uni('f')",w:1},{l:"G",k:"uni('g')",w:1},{l:"H",k:"uni('h')",w:1},{l:"J",k:"uni('j')",w:1},
+    {l:"K",k:"uni('k')",w:1},{l:"L",k:"uni('l')",w:1},{l:";",k:"uni(';')",w:1},{l:"'",k:"uni('\\'')",w:1},
+    {l:"Enter",k:"Return",w:2.25},
+  ],
+  [
+    {l:"Shift",k:"Shift",w:2.25},{l:"Z",k:"uni('z')",w:1},{l:"X",k:"uni('x')",w:1},{l:"C",k:"uni('c')",w:1},
+    {l:"V",k:"uni('v')",w:1},{l:"B",k:"uni('b')",w:1},{l:"N",k:"uni('n')",w:1},{l:"M",k:"uni('m')",w:1},
+    {l:",",k:"uni(',')",w:1},{l:".",k:"uni('.')",w:1},{l:"/",k:"uni('/')",w:1},{l:"Shift",k:"RShift",w:2.75},
+    {l:"",k:null,w:1.25},{l:"▲",k:"UpArrow",w:1},
+  ],
+  [
+    {l:"Ctrl",k:"Control",w:1.5},{l:"Super",k:"Super",w:1.25},{l:"Alt",k:"Alt",w:1.25},
+    {l:"Space",k:"Space",w:6.25},
+    {l:"Alt",k:"Alt",w:1.25,id:"ralt"},{l:"Super",k:"Super",w:1.25,id:"rsuper"},
+    {l:"Menu",k:"LMenu",w:1.25},{l:"Ctrl",k:"RControl",w:1.5},{l:"",k:null,w:0.25},
+    {l:"◄",k:"LeftArrow",w:1},{l:"▼",k:"DownArrow",w:1},{l:"►",k:"RightArrow",w:1},
+  ],
+];
+
+const NUMPAD_ROWS = [
+  [{l:"Num",k:"Numlock",w:1},{l:"/",k:"Divide",w:1},{l:"*",k:"Multiply",w:1},{l:"-",k:"Subtract",w:1}],
+  [{l:"7",k:"Numpad7",w:1},{l:"8",k:"Numpad8",w:1},{l:"9",k:"Numpad9",w:1},{l:"+",k:"Add",w:1,h:2}],
+  [{l:"4",k:"Numpad4",w:1},{l:"5",k:"Numpad5",w:1},{l:"6",k:"Numpad6",w:1}],
+  [{l:"1",k:"Numpad1",w:1},{l:"2",k:"Numpad2",w:1},{l:"3",k:"Numpad3",w:1},{l:"Ent",k:"Return",w:1,h:2,id:"numenter"}],
+  [{l:"0",k:"Numpad0",w:2},{l:".",k:"Decimal",w:1}],
+];
+
+const MEDIA_KEYS = [
+  {l:"Vol-",k:"VolumeDown"},{l:"Mute",k:"VolumeMute"},{l:"Vol+",k:"VolumeUp"},
+  {l:"⏮",k:"MediaPrevTrack"},{l:"⏯",k:"MediaPlayPause"},{l:"⏭",k:"MediaNextTrack"},{l:"⏹",k:"MediaStop"},
+];
+
+let selected = [];
+let copiedTimeout = null;
+
+function genSyntax() {
+  if (!selected.length) return "";
+  const mods = selected.filter(k => isMod(k.key));
+  const regs = selected.filter(k => !isMod(k.key));
+  if (!mods.length) return "[" + regs.map(k => "k(" + k.key + ")").join(",") + "]";
+  const parts = [];
+  mods.forEach(m => parts.push("k(" + m.key + ",p)"));
+  regs.forEach(k => parts.push("k(" + k.key + ")"));
+  [...mods].reverse().forEach(m => parts.push("k(" + m.key + ",r)"));
+  return "[" + parts.join(",") + "]";
+}
+
+function toggle(key, uid) {
+  if (!key) return;
+  const idx = selected.findIndex(k => k.id === uid);
+  if (idx >= 0) selected.splice(idx, 1);
+  else selected.push({ key, id: uid });
+  render();
+}
+
+function clearAll() {
+  selected = [];
+  render();
+}
+
+async function copyText() {
+  const s = genSyntax();
+  if (!s) return;
+  try {
+    await navigator.clipboard.writeText(s);
+  } catch {
+    const ta = document.createElement("textarea");
+    ta.value = s;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+  }
+  if (copiedTimeout) clearTimeout(copiedTimeout);
+  const btn = document.getElementById("btn-copy");
+  btn.textContent = "Copied!";
+  btn.classList.add("copied");
+  copiedTimeout = setTimeout(() => { btn.textContent = "Copy"; btn.classList.remove("copied"); }, 2000);
+}
+
+function makeKeyEl(def, ri, ki) {
+  const uid = def.id || (def.k + "-" + ri + "-" + ki);
+  const w = def.w * KEY_UNIT + (def.w > 1 ? (def.w - 1) * KEY_GAP : 0);
+  const h = def.h ? def.h * KEY_UNIT + (def.h - 1) * KEY_GAP : KEY_UNIT;
+
+  if (!def.k) {
+    const sp = document.createElement("div");
+    sp.style.width = w + "px";
+    sp.style.height = h + "px";
+    sp.style.flexShrink = "0";
+    return sp;
+  }
+
+  const sidx = selected.findIndex(k => k.id === uid);
+  const sel = sidx >= 0;
+  const m = isMod(def.k);
+
+  const btn = document.createElement("button");
+  btn.className = "key" + (sel ? (m ? " sel-mod" : " sel-reg") : "");
+  btn.style.width = w + "px";
+  btn.style.height = h + "px";
+  btn.style.fontSize = (def.l.length > 3 ? 10 : 13) + "px";
+  btn.textContent = def.l;
+  btn.onclick = () => toggle(def.k, uid);
+
+  if (sel) {
+    const badge = document.createElement("span");
+    badge.className = "key-badge " + (m ? "mod" : "reg");
+    badge.textContent = sidx + 1;
+    btn.appendChild(badge);
+  }
+
+  return btn;
+}
+
+function render() {
+  const app = document.getElementById("app");
+  app.innerHTML = "";
+
+  // Header
+  const hdr = document.createElement("div");
+  hdr.style.textAlign = "center";
+  hdr.innerHTML = '<h1>OpenDeck Macro Builder</h1><p class="subtitle">Click keys in the order you want them pressed. Modifiers auto-wrap with press/release.</p>';
+  app.appendChild(hdr);
+
+  // Output box
+  const syntax = genSyntax();
+  const ob = document.createElement("div");
+  ob.className = "output-box";
+  ob.innerHTML = `
+    <div style="flex:1;min-width:0">
+      <div class="label">Generated Syntax</div>
+      <div class="syntax-display ${syntax ? '' : 'empty'}">${syntax || 'Click keys below to build your macro...'}</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-shrink:0"></div>`;
+  const btns = ob.querySelector("div:last-child");
+
+  const cpBtn = document.createElement("button");
+  cpBtn.id = "btn-copy";
+  cpBtn.className = "btn-copy";
+  cpBtn.textContent = "Copy";
+  cpBtn.disabled = !syntax;
+  cpBtn.onclick = copyText;
+  btns.appendChild(cpBtn);
+
+  const clBtn = document.createElement("button");
+  clBtn.className = "btn-clear";
+  clBtn.textContent = "Clear";
+  clBtn.onclick = clearAll;
+  btns.appendChild(clBtn);
+
+  app.appendChild(ob);
+
+  // Order flow
+  if (selected.length) {
+    const of = document.createElement("div");
+    of.className = "order-flow";
+    const ol = document.createElement("span");
+    ol.className = "order-label";
+    ol.textContent = "Order:";
+    of.appendChild(ol);
+    selected.forEach((k, i) => {
+      if (i > 0) {
+        const ar = document.createElement("span");
+        ar.className = "order-arrow";
+        ar.textContent = "→";
+        of.appendChild(ar);
+      }
+      const tag = document.createElement("span");
+      tag.className = "order-tag " + (isMod(k.key) ? "mod" : "reg");
+      tag.innerHTML = '<span class="order-num">' + (i + 1) + '.</span>' + k.key;
+      of.appendChild(tag);
+    });
+    app.appendChild(of);
+  }
+
+  // Keyboard
+  const kw = document.createElement("div");
+  kw.className = "keyboard-wrap";
+
+  // Main keyboard
+  const mainCol = document.createElement("div");
+  mainCol.className = "kb-col";
+  KEYBOARD_ROWS.forEach((row, ri) => {
+    const r = document.createElement("div");
+    r.className = "kb-row";
+    r.style.height = KEY_UNIT + "px";
+    row.forEach((def, ki) => r.appendChild(makeKeyEl(def, ri, ki)));
+    mainCol.appendChild(r);
+  });
+  kw.appendChild(mainCol);
+
+  // Numpad
+  const npCol = document.createElement("div");
+  npCol.className = "kb-col";
+  npCol.style.marginTop = (KEY_UNIT + KEY_GAP) + "px";
+  NUMPAD_ROWS.forEach((row, ri) => {
+    const r = document.createElement("div");
+    r.className = "kb-row";
+    r.style.height = KEY_UNIT + "px";
+    row.forEach((def, ki) => r.appendChild(makeKeyEl(def, "np" + ri, ki)));
+    npCol.appendChild(r);
+  });
+  kw.appendChild(npCol);
+
+  app.appendChild(kw);
+
+  // Media
+  const mr = document.createElement("div");
+  mr.className = "media-row";
+  const ml = document.createElement("span");
+  ml.className = "media-label";
+  ml.textContent = "Media";
+  mr.appendChild(ml);
+  MEDIA_KEYS.forEach((def, i) => mr.appendChild(makeKeyEl({ ...def, w: 1 }, "med", i)));
+  app.appendChild(mr);
+
+  // Legend
+  const lg = document.createElement("div");
+  lg.className = "legend";
+  lg.innerHTML = `
+    <div class="legend-item"><div class="legend-swatch mod"></div>Modifier (auto press/release)</div>
+    <div class="legend-item"><div class="legend-swatch reg"></div>Regular key (click)</div>`;
+  app.appendChild(lg);
+}
+
+render();
+</script>
+</body>
+</html>
