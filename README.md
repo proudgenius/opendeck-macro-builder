@@ -14,6 +14,9 @@ OpenDeck's Simulate Input action expects a shorthand syntax like this:
 
 Writing this by hand means memorizing the format, knowing which keys are modifiers, getting the press/release order right, and looking up key names from the source. This tool does all of that for you.
 
+<img width="1430" height="775" alt="Screenshot_20260221_012355" src="https://github.com/user-attachments/assets/971caec5-64a1-4619-8678-c63ba6cd19f2" />
+
+
 ## Usage
 
 1. Download `opendeck-macro-builder.html`
